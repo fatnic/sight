@@ -14,7 +14,7 @@ struct Segment
 {
     Segment(const Point p1, const Point p2)
         : p1(p1)
-        , p2(p2)
+          , p2(p2)
     {}
     Point p1, p2;
 };
@@ -120,9 +120,6 @@ bool isSegmentFacing(Ray ray, Segment* segment, int i)
         case 3:
             if(ray.start.x < segment->p1.x) return true;
             break;
-        default:
-            return false;
-            break;
     }
     return false;
 };
@@ -165,17 +162,17 @@ double distance(Point p1, Point p2)
 
 int main()
 {
-	sf::ContextSettings settings;
-	settings.antialiasingLevel = 8;
+    sf::ContextSettings settings;
+    settings.antialiasingLevel = 8;
 
-	sf::RenderWindow window(sf::VideoMode(800,600), "GameWindow", sf::Style::Default, settings);
+    sf::RenderWindow window(sf::VideoMode(800,600), "GameWindow", sf::Style::Default, settings);
 
     // Add walls - Wall(position, dimensions)
     std::vector<Wall*> walls;
     walls.emplace_back(new Wall(0,0,800,600));
     walls.emplace_back(new Wall(120,100,150,250));
 
-  	Ray ray;
+    Ray ray;
 
     // Max length line needed to reach all points of screen (hyp of right angle triangle)
     float lineMax = std::sqrt((window.getSize().x * window.getSize().x) + (window.getSize().y * window.getSize().y)) + 1;
@@ -185,20 +182,20 @@ int main()
     rayStart.setOrigin(rayStart.getRadius(), rayStart.getRadius());
     rayStart.setFillColor(sf::Color::Yellow);
 
-	while(window.isOpen())
-	{
-		sf::Event event;
-		while(window.pollEvent(event))
-		{
-			if(event.type == sf::Event::Closed)
-				window.close();
-		}
+    while(window.isOpen())
+    {
+        sf::Event event;
+        while(window.pollEvent(event))
+        {
+            if(event.type == sf::Event::Closed)
+                window.close();
+        }
 
         // Set ray.start to mouse position
         ray.start.x = (double)sf::Mouse::getPosition(window).x;
         ray.start.y = (double)sf::Mouse::getPosition(window).y;
 
-		window.clear(sf::Color(64,64,64));
+        window.clear(sf::Color(64,64,64));
 
         for(Wall* wall : walls)
         {
@@ -228,6 +225,17 @@ int main()
 
             drawLine(ray.start, ray.end, sf::Color::White, &window);
 
+            //calc nearest intersection
+            //if boundary 
+            //  if nearest closer that point
+            //      add nearest
+            //  else
+            //      if nearest is point
+            //         add second nearest
+            //      else
+            //        add nearest
+            //      add point
+
             std::vector<Point> intersects;
             for(Wall* wall : walls)
             {
@@ -236,12 +244,36 @@ int main()
                     Point intersect;
                     getIntersection(ray, segment, intersect);
                     intersects.push_back(intersect);
-                    drawCircle(10, intersect, sf::Color::Magenta, &window);
+                    drawCircle(5, intersect, sf::Color::Magenta, &window);
                 }
             }
             std::sort(intersects.begin(), intersects.end(),
                     [ray] (Point& p1, Point& p2) { return distance(p1, ray.start) < distance(p2, ray.start); });
-            convexPoints.push_back(intersects.front());
+
+            if(rayline.boundary)
+            {
+                if(distance(intersects[0], ray.start) < distance(rayline.point, ray.start))
+                {
+                    convexPoints.push_back(intersects[0]);
+                } 
+                else
+                {
+                    if(intersects[0] == rayline.point)
+                    {
+                        convexPoints.push_back(intersects[1]);
+                        convexPoints.push_back(intersects[0]); 
+                    } 
+                    else
+                    {
+                        convexPoints.push_back(intersects[0]);
+                        convexPoints.push_back(rayline.point);
+                    }
+                }
+            }
+            else
+            {
+                convexPoints.push_back(intersects.front());
+            } 
         }
 
         /* sf::ConvexShape light(convexPoints.size()); */
@@ -250,9 +282,12 @@ int main()
         /* light.setFillColor(sf::Color::White); */
         /* window.draw(light); */
 
+        for(Point& p : convexPoints)
+            drawCircle(5, p, sf::Color::Yellow, &window);
+
         rayStart.setPosition(ray.start.x, ray.start.y);
         window.draw(rayStart);
 
-		window.display();
-	}
+        window.display();
+    }
 }
